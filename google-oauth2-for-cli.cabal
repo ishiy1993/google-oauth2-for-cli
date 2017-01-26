@@ -17,6 +17,9 @@ library
   hs-source-dirs:      src
   exposed-modules:     Network.Google.OAuth2
   build-depends:       base >= 4.7 && < 5
+                     , req
+                     , wai
+                     , warp
   default-language:    Haskell2010
   ghc-options:         -Wall
 
