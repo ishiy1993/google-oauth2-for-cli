@@ -8,7 +8,8 @@ module Network.Google.OAuth2
     ) where
 
 import Control.Concurrent
-import Control.Exception (throwIO)
+import Control.Exception (onException, throwIO)
+import Control.Monad (join)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import Data.Monoid ((<>))
@@ -20,6 +21,7 @@ import Network.Wai.Handler.Warp
 import System.Directory
 import System.Exit
 import System.FilePath
+import System.IO (hPutStrLn, stderr)
 
 getToken :: OAuth2Client -> FilePath -> [Scope] -> IO AccessToken
 getToken c tokenFile scopes = do
@@ -75,13 +77,17 @@ getCode c scopes = do
     putStrLn $ B.unpack $ authUri <> q
     m <- newEmptyMVar
     _ <- forkIO $ run serverPort (app m)
-    takeMVar m
+            `onException` do
+                hPutStrLn stderr $ "Unable to use port " ++ show serverPort
+                putMVar m Nothing
+    mc <- takeMVar m
+    case mc of
+         Nothing -> die "Unable to get code"
+         Just code -> return code
 
-app :: MVar Code -> Application
+app :: MVar (Maybe Code) -> Application
 app m request respond = do
-    case lookup "code" (queryString request) of
-         Just (Just code) -> putMVar m $ B.unpack code
-         _ -> die "Unable to get code"
+    putMVar m $ B.unpack <$> join (lookup "code" $ queryString request)
     respond $ responseLBS status200
                           [("Content-Type", "text/plain")]
                           "Return your app"

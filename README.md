@@ -11,5 +11,4 @@ It has silimar API. It uses [Manual and Copy Paste](https://developers.google.co
 
 ## Todo
 
-- error handling
 - test
