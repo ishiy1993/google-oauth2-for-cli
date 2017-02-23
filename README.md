@@ -3,7 +3,9 @@
 
 Get Google OAuth2 for CLI tools
 
-## Usage
+## Examples
+
+- [sch](https://github.com/ishiy1993/sch)
 
 ## Other packages
 
