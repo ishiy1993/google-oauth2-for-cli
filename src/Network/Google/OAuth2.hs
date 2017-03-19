@@ -31,7 +31,9 @@ getToken c tokenFile scopes = do
 readToken :: OAuth2Client -> FilePath -> IO AccessToken
 readToken c tokenFile = do
     t <- read <$> readFile tokenFile
-    let e = fromIntegral $ expiresIn t - 5
+    let dt = 5
+        -- Avoid latent error
+        e = fromIntegral $ expiresIn t - dt
     now <- getCurrentTime
     mt <- getModificationTime tokenFile
     if now < addUTCTime e mt
