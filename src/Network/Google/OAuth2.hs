@@ -23,6 +23,7 @@ import System.Directory
 import System.Exit
 import System.FilePath
 import System.IO (hPutStrLn, stderr)
+import System.Posix.Files
 
 getToken :: OAuth2Client -> FilePath -> [Scope] -> IO AccessToken
 getToken c tokenFile scopes = readToken c tokenFile `catch` download
@@ -60,6 +61,8 @@ saveTokenInfo :: FilePath -> TokenInfo -> IO ()
 saveTokenInfo tokenFile t = do
     createDirectoryIfMissing True $ takeDirectory tokenFile
     writeFile tokenFile (show t)
+    let fm = unionFileModes ownerReadMode ownerWriteMode
+    setFileMode tokenFile fm
 
 downloadToken :: OAuth2Client -> FilePath -> [Scope] -> IO AccessToken
 downloadToken c tokenFile scopes = do

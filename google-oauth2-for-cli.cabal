@@ -24,6 +24,7 @@ library
                      , http-types
                      , req
                      , time
+                     , unix
                      , wai
                      , warp
   default-language:    Haskell2010
