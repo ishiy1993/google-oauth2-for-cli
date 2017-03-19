@@ -68,6 +68,11 @@ downloadToken c tokenFile scopes = do
 
 getCode :: OAuth2Client -> [Scope] -> IO Code
 getCode c scopes = do
+    m <- newEmptyMVar
+    _ <- forkIO $ run serverPort (server m)
+            `onException` do
+                hPutStrLn stderr $ "Unable to use port " ++ show serverPort
+                putMVar m Nothing
     let authUri = "https://accounts.google.com/o/oauth2/v2/auth"
         q = renderSimpleQuery True
                 [ ("scope", B.pack $ unwords scopes)
@@ -77,11 +82,6 @@ getCode c scopes = do
                 ]
     putStrLn "Open the following uri in your browser:"
     putStrLn $ B.unpack $ authUri <> q
-    m <- newEmptyMVar
-    _ <- forkIO $ run serverPort (server m)
-            `onException` do
-                hPutStrLn stderr $ "Unable to use port " ++ show serverPort
-                putMVar m Nothing
     mc <- takeMVar m
     case mc of
          Nothing -> die "Unable to get code"
