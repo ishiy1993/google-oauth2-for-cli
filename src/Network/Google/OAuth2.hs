@@ -8,7 +8,7 @@ module Network.Google.OAuth2
     ) where
 
 import Control.Concurrent
-import Control.Exception (onException, throwIO)
+import Control.Exception (onException, throwIO, catch, IOException)
 import Control.Monad (join)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
@@ -25,9 +25,10 @@ import System.FilePath
 import System.IO (hPutStrLn, stderr)
 
 getToken :: OAuth2Client -> FilePath -> [Scope] -> IO AccessToken
-getToken c tokenFile scopes = do
-    b <- doesFileExist tokenFile
-    if b then readToken c tokenFile else downloadToken c tokenFile scopes
+getToken c tokenFile scopes = readToken c tokenFile `catch` download
+    where
+        download :: IOException -> IO AccessToken
+        download = const $ downloadToken c tokenFile scopes
 
 readToken :: OAuth2Client -> FilePath -> IO AccessToken
 readToken c tokenFile = do
