@@ -78,7 +78,7 @@ getCode c scopes = do
     putStrLn "Open the following uri in your browser:"
     putStrLn $ B.unpack $ authUri <> q
     m <- newEmptyMVar
-    _ <- forkIO $ run serverPort (app m)
+    _ <- forkIO $ run serverPort (server m)
             `onException` do
                 hPutStrLn stderr $ "Unable to use port " ++ show serverPort
                 putMVar m Nothing
@@ -87,8 +87,8 @@ getCode c scopes = do
          Nothing -> die "Unable to get code"
          Just code -> return code
 
-app :: MVar (Maybe Code) -> Application
-app m request respond = do
+server :: MVar (Maybe Code) -> Application
+server m request respond = do
     putMVar m $ B.unpack <$> join (lookup "code" $ queryString request)
     respond $ responseLBS status200
                           [("Content-Type", "text/plain")]
