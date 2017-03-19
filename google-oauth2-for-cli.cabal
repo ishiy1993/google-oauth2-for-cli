@@ -1,5 +1,5 @@
 name:                google-oauth2-for-cli
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Get Google OAuth2 token for CLI tools
 description:         Please see README.md
 homepage:            https://github.com/ishiy1993/google-oauth2-for-cli#readme
