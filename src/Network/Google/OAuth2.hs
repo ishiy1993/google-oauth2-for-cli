@@ -13,6 +13,7 @@ import Control.Monad (join)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import Data.Monoid ((<>))
+import Data.String (fromString)
 import Data.Time
 import Network.HTTP.Types (renderSimpleQuery, status200)
 import Network.HTTP.Req
@@ -69,7 +70,9 @@ downloadToken c tokenFile scopes = do
 getCode :: OAuth2Client -> [Scope] -> IO Code
 getCode c scopes = do
     m <- newEmptyMVar
-    _ <- forkIO $ run serverPort (server m)
+    let st = setHost (fromString localhost)
+             $ setPort serverPort defaultSettings
+    _ <- forkIO $ runSettings st (server m)
             `onException` do
                 hPutStrLn stderr $ "Unable to use port " ++ show serverPort
                 putMVar m Nothing
@@ -111,8 +114,11 @@ tokenUrl = https "accounts.google.com" /: "o" /: "oauth2" /: "token"
 serverPort :: Port
 serverPort = 8017
 
+localhost :: String
+localhost = "127.0.0.1"
+
 redirectUri :: String
-redirectUri = "http://127.0.0.1:" ++ show serverPort
+redirectUri = concat ["http://", localhost, ":", show serverPort]
 
 data OAuth2Client = OAuth2Client
     { clientId :: String
