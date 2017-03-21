@@ -1,5 +1,5 @@
 # Google OAuth2 for CLI
-[![Hackage](https://img.shields.io/hackage/v/google-oauth2-for-cli.svg)](http://hackage.haskell.org/package/google-oauth2-for-cli-0.1.0.0)
+[![Hackage](https://img.shields.io/hackage/v/google-oauth2-for-cli.svg)](http://hackage.haskell.org/package/google-oauth2-for-cli-0.1.0.1)
 
 Get Google OAuth2 for CLI tools
 
