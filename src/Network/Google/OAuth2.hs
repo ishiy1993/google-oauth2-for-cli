@@ -8,11 +8,12 @@ module Network.Google.OAuth2
     ) where
 
 import Control.Concurrent
-import Control.Exception (onException, throwIO)
+import Control.Exception (onException, throwIO, catch, IOException)
 import Control.Monad (join)
 import Data.Aeson
 import qualified Data.ByteString.Char8 as B
 import Data.Monoid ((<>))
+import Data.String (fromString)
 import Data.Time
 import Network.HTTP.Types (renderSimpleQuery, status200)
 import Network.HTTP.Req
@@ -22,16 +23,20 @@ import System.Directory
 import System.Exit
 import System.FilePath
 import System.IO (hPutStrLn, stderr)
+import System.Posix.Files
 
 getToken :: OAuth2Client -> FilePath -> [Scope] -> IO AccessToken
-getToken c tokenFile scopes = do
-    b <- doesFileExist tokenFile
-    if b then readToken c tokenFile else downloadToken c tokenFile scopes
+getToken c tokenFile scopes = readToken c tokenFile `catch` download
+    where
+        download :: IOException -> IO AccessToken
+        download = const $ downloadToken c tokenFile scopes
 
 readToken :: OAuth2Client -> FilePath -> IO AccessToken
 readToken c tokenFile = do
     t <- read <$> readFile tokenFile
-    let e = fromIntegral $ expiresIn t - 5
+    let dt = 5
+        -- Avoid latent error
+        e = fromIntegral $ expiresIn t - dt
     now <- getCurrentTime
     mt <- getModificationTime tokenFile
     if now < addUTCTime e mt
@@ -56,6 +61,8 @@ saveTokenInfo :: FilePath -> TokenInfo -> IO ()
 saveTokenInfo tokenFile t = do
     createDirectoryIfMissing True $ takeDirectory tokenFile
     writeFile tokenFile (show t)
+    let fm = unionFileModes ownerReadMode ownerWriteMode
+    setFileMode tokenFile fm
 
 downloadToken :: OAuth2Client -> FilePath -> [Scope] -> IO AccessToken
 downloadToken c tokenFile scopes = do
@@ -66,6 +73,13 @@ downloadToken c tokenFile scopes = do
 
 getCode :: OAuth2Client -> [Scope] -> IO Code
 getCode c scopes = do
+    m <- newEmptyMVar
+    let st = setHost (fromString localhost)
+             $ setPort serverPort defaultSettings
+    _ <- forkIO $ runSettings st (server m)
+            `onException` do
+                hPutStrLn stderr $ "Unable to use port " ++ show serverPort
+                putMVar m Nothing
     let authUri = "https://accounts.google.com/o/oauth2/v2/auth"
         q = renderSimpleQuery True
                 [ ("scope", B.pack $ unwords scopes)
@@ -75,18 +89,13 @@ getCode c scopes = do
                 ]
     putStrLn "Open the following uri in your browser:"
     putStrLn $ B.unpack $ authUri <> q
-    m <- newEmptyMVar
-    _ <- forkIO $ run serverPort (app m)
-            `onException` do
-                hPutStrLn stderr $ "Unable to use port " ++ show serverPort
-                putMVar m Nothing
     mc <- takeMVar m
     case mc of
          Nothing -> die "Unable to get code"
          Just code -> return code
 
-app :: MVar (Maybe Code) -> Application
-app m request respond = do
+server :: MVar (Maybe Code) -> Application
+server m request respond = do
     putMVar m $ B.unpack <$> join (lookup "code" $ queryString request)
     respond $ responseLBS status200
                           [("Content-Type", "text/plain")]
@@ -109,8 +118,11 @@ tokenUrl = https "accounts.google.com" /: "o" /: "oauth2" /: "token"
 serverPort :: Port
 serverPort = 8017
 
+localhost :: String
+localhost = "127.0.0.1"
+
 redirectUri :: String
-redirectUri = "http://127.0.0.1:" ++ show serverPort
+redirectUri = concat ["http://", localhost, ":", show serverPort]
 
 data OAuth2Client = OAuth2Client
     { clientId :: String
