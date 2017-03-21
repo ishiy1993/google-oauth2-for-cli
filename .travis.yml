@@ -1,0 +1,10 @@
+language: c
+before_install:
+    - sudo curl -sSL https://get.haskellstack.org/ | sh
+
+install:
+    - stack setup
+    - stack test --only-dependencies
+
+script:
+    - stack test
