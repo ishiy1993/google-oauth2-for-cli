@@ -1,4 +1,10 @@
 language: c
+
+cache:
+    directories:
+        - .stack-work
+        - $HOME/.stack
+
 before_install:
     - sudo curl -sSL https://get.haskellstack.org/ | sh
 
